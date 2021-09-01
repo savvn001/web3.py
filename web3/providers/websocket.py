@@ -2,6 +2,9 @@ import asyncio
 import json
 import logging
 import os
+from concurrent import futures
+import threading
+
 from threading import (
     Thread,
 )
@@ -84,8 +87,7 @@ class PersistentWebSocket:
                 pass
             self.ws = None
 
-
-class WebsocketProvider(JSONBaseProvider):
+class WebsocketSingleProvider(JSONBaseProvider):
     logger = logging.getLogger("web3.providers.WebsocketProvider")
     _loop = None
 
@@ -142,3 +144,42 @@ class WebsocketProvider(JSONBaseProvider):
             WebsocketProvider._loop
         )
         return future.result()
+
+class WebsocketProvider():
+    logger = logging.getLogger("web3.providers.WebsocketProvider")
+    _loop = None
+
+    def __init__(
+        self,
+        endpoint_uri: Optional[Union[URI, str]] = None,
+        websocket_kwargs: Optional[Any] = None,
+        websocket_timeout: int = DEFAULT_WEBSOCKET_TIMEOUT,
+        max_websockets=8,
+    ) -> None:
+
+        self.websockets = []
+
+        # Create all the websocket objects to use
+        for x in range(max_websockets):
+            websocket_single = WebsocketSingleProvider(endpoint_uri)
+            self.websockets.append(websocket_single)
+
+            print(f'made websocket {x}')
+
+        # Start the ThreadPoolExecutor which will accept requests
+        self.ex = futures.ThreadPoolExecutor(max_workers=None) # Will default to no. of cores
+
+    def make_request_task(self, method: RPCEndpoint, params: Any) -> RPCResponse:
+
+        threadIntValue = int(threading.current_thread().name[-1])
+
+        return self.websockets[threadIntValue].make_request(method, params)
+
+
+    def make_request(self, method: RPCEndpoint, params: Any) -> RPCResponse:
+
+        # When anything calls this fn, submit a job to our ThreadPoolExecutor
+        future = self.ex.submit(self.make_request_task, method, params)
+        res = future.result(timeout=10)
+        return res
+
