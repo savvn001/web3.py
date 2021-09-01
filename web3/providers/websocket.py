@@ -145,7 +145,7 @@ class WebsocketSingleProvider(JSONBaseProvider):
         )
         return future.result()
 
-class WebsocketProvider():
+class WebsocketProvider(JSONBaseProvider):
     logger = logging.getLogger("web3.providers.WebsocketProvider")
     _loop = None
 
@@ -157,6 +157,7 @@ class WebsocketProvider():
         max_websockets=8,
     ) -> None:
 
+        self.endpoint_uri = endpoint_uri
         self.websockets = []
 
         # Create all the websocket objects to use
@@ -168,6 +169,9 @@ class WebsocketProvider():
 
         # Start the ThreadPoolExecutor which will accept requests
         self.ex = futures.ThreadPoolExecutor(max_workers=None) # Will default to no. of cores
+
+    def __str__(self) -> str:
+        return "WS connection {0}".format(self.endpoint_uri)
 
     def make_request_task(self, method: RPCEndpoint, params: Any) -> RPCResponse:
 
