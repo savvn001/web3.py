@@ -168,7 +168,7 @@ class WebsocketProvider(JSONBaseProvider):
             print(f'made websocket {x}')
 
         # Start the ThreadPoolExecutor which will accept requests
-        self.ex = futures.ThreadPoolExecutor(max_workers=None) # Will default to no. of cores
+        self.ex = futures.ThreadPoolExecutor(max_workers=max_websockets)
 
     def __str__(self) -> str:
         return "WS connection {0}".format(self.endpoint_uri)
@@ -186,4 +186,3 @@ class WebsocketProvider(JSONBaseProvider):
         future = self.ex.submit(self.make_request_task, method, params)
         res = future.result(timeout=10)
         return res
-
